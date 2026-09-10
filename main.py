@@ -12,6 +12,7 @@ from progression import check_progression
 from ai_advisor import answer_student_question
 from advisor_eligibility import find_eligible_courses
 from advisor_engine import run_advisor_engine
+from advisor_v4 import answer_student_question_v4
 
 app = FastAPI(title="Asteris API")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -40,6 +41,7 @@ class EligibilityRequest(BaseModel):
 class AdvisorRequest(BaseModel):
     question: str
     conversation: list[ChatMessage] = Field(default_factory=list)
+    advisor_state: dict | None = None
 
 
 @app.get("/")
@@ -325,6 +327,21 @@ def advisor(request: AdvisorRequest):
                 message.model_dump()
                 for message in request.conversation
             ],
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.post("/advisor-v4")
+def advisor_v4(request: AdvisorRequest):
+    try:
+        return answer_student_question_v4(
+            question=request.question,
+            conversation=[
+                message.model_dump()
+                for message in request.conversation
+            ],
+            advisor_state=request.advisor_state,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
